@@ -49,12 +49,13 @@ model Post {
   authorId  String
   caption   String?
   media     Json
+  hidden    Boolean  @default(false)
   likes     Like[]
   comments  Comment[]
+  reports   Report[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   author    User      @relation(fields: [authorId], references: [id])
-  reports   Report[]
   @@index([createdAt])
 }
 
@@ -140,13 +141,13 @@ model AuditLog {
 }
 
 model Report {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   reporterId String
-  postId    String
-  reason    String
-  status    String   @default("open")
-  createdAt DateTime @default(now())
-  reporter  User     @relation(fields: [reporterId], references: [id])
-  post      Post     @relation(fields: [postId], references: [id])
+  postId     String
+  reason     String
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+  reporter   User     @relation(fields: [reporterId], references: [id])
+  post       Post     @relation(fields: [postId], references: [id])
   @@index([status, createdAt])
 }
