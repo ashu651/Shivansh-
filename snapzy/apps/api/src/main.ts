@@ -15,14 +15,15 @@ import { CsrfDoubleSubmit, CsrfTokenIssue } from './common/middleware/csrf.middl
 import { IdempotencyMiddleware } from './common/middleware/idempotency.middleware';
 import * as Sentry from '@sentry/node';
 import { RequestLoggerMiddleware } from './common/middleware/logger.middleware';
+import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
 
   if (process.env.SENTRY_DSN) {
     Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1 });
-    // request handler must be the first middleware
     app.use((Sentry as any).Handlers.requestHandler());
+    app.useGlobalInterceptors(new SentryInterceptor());
   }
 
   app.use(helmet({
@@ -89,7 +90,6 @@ async function bootstrap() {
   }
 
   await app.listen(4000);
-  // eslint-disable-next-line no-console
   console.log(`API running on http://localhost:4000`);
 }
 

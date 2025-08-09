@@ -1,10 +1,12 @@
 FROM node:20-alpine as deps
+RUN apk add --no-cache ffmpeg
 WORKDIR /usr/src/app
 COPY package.json pnpm-lock.yaml* ./
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 RUN pnpm install --frozen-lockfile || pnpm install
 
 FROM node:20-alpine as builder
+RUN apk add --no-cache ffmpeg
 WORKDIR /usr/src/app
 COPY . .
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
@@ -13,6 +15,7 @@ RUN pnpm prisma:generate
 RUN pnpm build
 
 FROM node:20-alpine as runner
+RUN apk add --no-cache ffmpeg
 WORKDIR /usr/src/app
 ENV NODE_ENV=production
 COPY --from=builder /usr/src/app/dist ./dist

@@ -14,6 +14,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import Joi from 'joi';
+import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
   imports: [
@@ -40,6 +41,11 @@ import Joi from 'joi';
     MediaModule,
   ],
   controllers: [UsersController, MessagesController],
-  providers: [UsersService, MessagesService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    UsersService,
+    MessagesService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule {}
