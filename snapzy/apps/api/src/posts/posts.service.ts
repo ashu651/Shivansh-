@@ -6,7 +6,9 @@ const prisma = new PrismaClient();
 @Injectable()
 export class PostsService {
   async createPost(authorId: string, data: { caption?: string; media: any[] }) {
-    return prisma.post.create({ data: { authorId, caption: data.caption, media: data.media as any } });
+    const post = await prisma.post.create({ data: { authorId, caption: data.caption, media: data.media as any } });
+    // TODO: enqueue media processing job (FFmpeg) for videos
+    return post;
   }
 
   async getFeed(userId: string, limit = 20, cursor?: string) {

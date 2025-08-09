@@ -7,11 +7,18 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Role {
+  USER
+  MOD
+  ADMIN
+}
+
 model User {
   id              String    @id @default(cuid())
   username        String    @unique
   email           String    @unique
   password        String
+  role            Role      @default(USER)
   bio             String?
   profilePhoto    String?
   isEmailVerified Boolean   @default(false)
@@ -24,6 +31,7 @@ model User {
   messages        Message[] @relation("authorMessages")
   conversations   ConversationParticipant[]
   stories         Story[]
+  auditLogs       AuditLog[]
 }
 
 model Session {
@@ -117,4 +125,14 @@ model Story {
   createdAt DateTime @default(now())
   author    User     @relation(fields: [authorId], references: [id])
   @@index([expiresAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  @@index([userId, createdAt])
 }
