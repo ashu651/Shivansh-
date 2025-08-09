@@ -15,6 +15,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import Joi from 'joi';
 import { RolesGuard } from './common/guards/roles.guard';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AuthModule,
     PostsModule,
     MediaModule,
+    AdminModule,
   ],
   controllers: [UsersController, MessagesController],
   providers: [

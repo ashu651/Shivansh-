@@ -10,7 +10,15 @@ const worker = new Worker('media-processing', async (job) => {
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post) return;
   const media = Array.isArray(post.media) ? post.media : [];
-  const processed = media.map((m: any) => ({ ...m, processed: true, thumbnailUrl: m.url }));
+  const processed = media.map((m: any) => ({
+    ...m,
+    processed: true,
+    thumbnailUrl: m.url,
+    hls: {
+      playlist: (m.url || '').replace(/\.(mp4|mov|webm)$/i, '.m3u8'),
+      variants: [240, 480, 720],
+    },
+  }));
   await prisma.post.update({ where: { id: postId }, data: { media: processed as any } });
   return { updated: true };
 }, { connection: connection as any });
