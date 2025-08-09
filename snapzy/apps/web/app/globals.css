@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --brand-start: #7C3AED; --brand-end: #06B6D4; }
+body { font-family: Inter, ui-sans-serif, system-ui, -apple-system; }
