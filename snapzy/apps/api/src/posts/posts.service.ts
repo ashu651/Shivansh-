@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { mediaQueue } from '../worker/queue';
 
 const prisma = new PrismaClient();
 
@@ -7,7 +8,7 @@ const prisma = new PrismaClient();
 export class PostsService {
   async createPost(authorId: string, data: { caption?: string; media: any[] }) {
     const post = await prisma.post.create({ data: { authorId, caption: data.caption, media: data.media as any } });
-    // TODO: enqueue media processing job (FFmpeg) for videos
+    await mediaQueue.add('process', { postId: post.id });
     return post;
   }
 

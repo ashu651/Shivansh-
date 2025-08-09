@@ -13,9 +13,17 @@ import { ValidationPipe } from '@nestjs/common';
 import * as promClient from 'prom-client';
 import { CsrfDoubleSubmit, CsrfTokenIssue } from './common/middleware/csrf.middleware';
 import { IdempotencyMiddleware } from './common/middleware/idempotency.middleware';
+import * as Sentry from '@sentry/node';
+import { RequestLoggerMiddleware } from './common/middleware/logger.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
+
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1 });
+    // request handler must be the first middleware
+    app.use((Sentry as any).Handlers.requestHandler());
+  }
 
   app.use(helmet({
     contentSecurityPolicy: {
@@ -45,6 +53,7 @@ async function bootstrap() {
   app.use(limiter);
 
   app.use(CorrelationIdMiddleware);
+  app.use(RequestLoggerMiddleware);
   app.use(CsrfTokenIssue);
   app.use(CsrfDoubleSubmit);
   app.use(IdempotencyMiddleware);
@@ -61,7 +70,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('/api/docs', app, document);
 
-  // Prometheus metrics
   const register = new promClient.Registry();
   promClient.collectDefaultMetrics({ register });
   app.getHttpAdapter().getInstance().get('/metrics', async (_req: any, res: any) => {
@@ -75,6 +83,10 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().get('/health/readiness', (_req: any, res: any) => {
     res.json({ ok: true, status: 'ready' });
   });
+
+  if (process.env.SENTRY_DSN) {
+    app.use((Sentry as any).Handlers.errorHandler());
+  }
 
   await app.listen(4000);
   // eslint-disable-next-line no-console

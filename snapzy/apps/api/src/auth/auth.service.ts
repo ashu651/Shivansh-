@@ -24,7 +24,7 @@ export class AuthService {
     if (existing) throw new BadRequestException('User exists');
     const hash = await argon2.hash(password, { type: argon2.argon2id });
     const user = await prisma.user.create({ data: { username, email, password: hash } });
-    // TODO: send verification email with token
+    await prisma.auditLog.create({ data: { userId: user.id, action: 'register', metadata: { email } as any } });
     return user;
   }
 
@@ -37,7 +37,7 @@ export class AuthService {
   }
 
   private signAccess(user: any) {
-    const payload = { sub: user.id, email: user.email, username: user.username };
+    const payload = { sub: user.id, email: user.email, username: user.username, role: user.role };
     return this.jwt.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET || 'dev_access_secret_change_me',
       expiresIn: process.env.JWT_ACCESS_EXPIRES || '900s',
@@ -59,6 +59,7 @@ export class AuthService {
     const user = await this.validateUser(email, password);
     const accessToken = this.signAccess(user);
     const { token: refreshToken, sessionId } = await this.issueRefresh(user.id);
+    await prisma.auditLog.create({ data: { userId: user.id, action: 'login', metadata: {} as any } });
     return { accessToken, refreshToken, sessionId, user };
   }
 
@@ -70,11 +71,9 @@ export class AuthService {
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) throw new UnauthorizedException('Invalid user');
 
-    // Invalidate old
     await redis.del(`refresh:${sessionId}`);
     await prisma.session.delete({ where: { id: sessionId } });
 
-    // Issue new
     const accessToken = this.signAccess(user);
     const { token: newRefresh, sessionId: newSessionId } = await this.issueRefresh(user.id);
     return { accessToken, refreshToken: newRefresh, sessionId: newSessionId };

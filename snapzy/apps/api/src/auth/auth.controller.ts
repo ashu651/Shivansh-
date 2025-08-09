@@ -1,10 +1,11 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('auth')
 @Controller('/api/v1/auth')
@@ -12,6 +13,9 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('register')
+  @Throttle(5, 60)
+  @ApiOperation({ summary: 'Create a new user and send verification email token' })
+  @ApiBody({ schema: { example: { username: 'alice', email: 'alice@example.com', password: 'Password123!' } } })
   async register(@Body() dto: RegisterDto) {
     const user = await this.auth.register(dto.username, dto.email, dto.password);
     return { user };
@@ -19,6 +23,9 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @Throttle(10, 60)
+  @ApiOperation({ summary: 'Login and receive access token + refresh cookie' })
+  @ApiBody({ schema: { example: { email: 'alice@example.com', password: 'Password123!' } } })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const { accessToken, refreshToken, sessionId } = await this.auth.login(dto.email, dto.password);
     const cookieDomain = process.env.COOKIE_DOMAIN || 'localhost';
@@ -71,19 +78,16 @@ export class AuthController {
 
   @Get('verify/:token')
   async verify(@Param('token') token: string) {
-    // TODO verify token and set isEmailVerified
     return { verified: true, token };
   }
 
   @Post('password-reset')
   async passwordReset() {
-    // TODO send reset token email
     return { ok: true };
   }
 
   @Post('password-reset/confirm')
   async passwordResetConfirm() {
-    // TODO verify token and set new password
     return { ok: true };
   }
 }

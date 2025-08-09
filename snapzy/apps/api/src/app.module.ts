@@ -13,10 +13,20 @@ import { JwtModule } from '@nestjs/jwt';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
+import Joi from 'joi';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
+        DATABASE_URL: Joi.string().uri().required(),
+        REDIS_URL: Joi.string().uri().required(),
+        JWT_ACCESS_SECRET: Joi.string().required(),
+        JWT_REFRESH_SECRET: Joi.string().required(),
+        CORS_ORIGIN: Joi.string().required(),
+      }).unknown(true),
+    }),
     ThrottlerModule.forRoot([{ ttl: 60, limit: 300 }]),
     JwtModule.register({}),
     GraphQLModule.forRoot<ApolloDriverConfig>({

@@ -1,16 +1,19 @@
+import { Worker } from 'bullmq';
+import Redis from 'ioredis';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
-async function processJobs() {
-  // In a real system, consume queue. Here we just log.
-  // Simulate updating posts with processed assets if needed.
-  const recent = await prisma.post.findMany({ orderBy: { createdAt: 'desc' }, take: 5 });
-  for (const post of recent) {
-    // no-op
-  }
-}
+const worker = new Worker('media-processing', async (job) => {
+  const { postId } = job.data as { postId: string };
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post) return;
+  const media = Array.isArray(post.media) ? post.media : [];
+  const processed = media.map((m: any) => ({ ...m, processed: true, thumbnailUrl: m.url }));
+  await prisma.post.update({ where: { id: postId }, data: { media: processed as any } });
+  return { updated: true };
+}, { connection: connection as any });
 
-setInterval(() => {
-  processJobs().catch((e) => console.error(e));
-}, 5000);
+worker.on('completed', (job) => console.log('media job done', job.id));
+worker.on('failed', (job, err) => console.error('media job failed', job?.id, err));
