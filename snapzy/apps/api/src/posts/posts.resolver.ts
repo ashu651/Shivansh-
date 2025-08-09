@@ -1,17 +1,18 @@
 import { Resolver, Query, Args } from '@nestjs/graphql';
 import { PostsService } from './posts.service';
-import { GraphQLJSON } from 'graphql-type-json';
+import { GqlPost } from '../graphql/types/post.type';
 
-@Resolver()
+@Resolver(() => GqlPost)
 export class PostsResolver {
   constructor(private readonly posts: PostsService) {}
 
-  @Query(() => GraphQLJSON)
-  async feedGql(
+  @Query(() => [GqlPost])
+  async postsFeed(
     @Args('userId', { type: () => String }) userId: string,
     @Args('limit', { type: () => Number, nullable: true }) limit?: number,
     @Args('cursor', { type: () => String, nullable: true }) cursor?: string,
   ) {
-    return this.posts.getFeed(userId, limit ?? 20, cursor);
+    const { posts } = await this.posts.getFeed(userId, limit ?? 20, cursor);
+    return posts as any;
   }
 }
