@@ -16,6 +16,7 @@ import { IdempotencyMiddleware } from './common/middleware/idempotency.middlewar
 import * as Sentry from '@sentry/node';
 import { RequestLoggerMiddleware } from './common/middleware/logger.middleware';
 import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
+import { ETagMiddleware } from './common/middleware/etag.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
@@ -58,6 +59,7 @@ async function bootstrap() {
   app.use(CsrfTokenIssue);
   app.use(CsrfDoubleSubmit);
   app.use(IdempotencyMiddleware);
+  app.use(ETagMiddleware);
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
