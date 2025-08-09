@@ -15,7 +15,7 @@ export class PostsService {
   async getFeed(userId: string, limit = 20, cursor?: string) {
     const following = await prisma.follow.findMany({ where: { followerId: userId }, select: { followingId: true } });
     const ids = [userId, ...following.map((f) => f.followingId)];
-    const where: any = { authorId: { in: ids } };
+    const where: any = { authorId: { in: ids }, hidden: false };
     if (cursor) where.createdAt = { lt: new Date(cursor) };
     const posts = await prisma.post.findMany({ where, orderBy: { createdAt: 'desc' }, take: limit + 1, include: { author: true, likes: true, comments: true } });
     const next = posts.length > limit ? posts[limit - 1]?.createdAt.toISOString() : null;
