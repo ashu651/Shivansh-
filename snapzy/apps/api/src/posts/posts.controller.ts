@@ -4,6 +4,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 @ApiTags('posts')
 @ApiBearerAuth()
@@ -43,5 +46,14 @@ export class PostsController {
   async comment(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     const comment = await this.posts.addComment(req.user.userId, id, body.text, body.parentId);
     return { comment };
+  }
+
+  @HttpPost(':id/report')
+  @UseGuards(JwtAuthGuard)
+  @Throttle(10, 60)
+  @ApiOperation({ summary: 'Report a post for moderation' })
+  async report(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    const report = await prisma.report.create({ data: { reporterId: req.user.userId, postId: id, reason: body.reason || 'unspecified' } });
+    return { report };
   }
 }
