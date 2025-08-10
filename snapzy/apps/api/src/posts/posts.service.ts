@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { mediaQueue } from '../worker/queue';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 const prisma = new PrismaClient();
 
 @Injectable()
 export class PostsService {
+  constructor(private readonly notifications?: NotificationsGateway) {}
+
   async createPost(authorId: string, data: { caption?: string; media: any[] }) {
     const post = await prisma.post.create({ data: { authorId, caption: data.caption, media: data.media as any } });
     await mediaQueue.add('process', { postId: post.id });
@@ -31,6 +34,9 @@ export class PostsService {
       return { liked: false };
     }
     await prisma.like.create({ data: { userId, postId } });
+    if (this.notifications && userId !== post.authorId) {
+      this.notifications.notifyUser(post.authorId, 'post:liked', { postId, userId });
+    }
     return { liked: true };
   }
 

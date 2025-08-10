@@ -19,6 +19,7 @@ import { AdminModule } from './admin/admin.module';
 import { ConsentController } from './consent/consent.controller';
 import { createGraphqlContext } from './graphql/context';
 import { PushController } from './push/push.controller';
+import { NotificationsGateway } from './notifications/notifications.gateway';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { PushController } from './push/push.controller';
   providers: [
     UsersService,
     MessagesService,
+    NotificationsGateway,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
