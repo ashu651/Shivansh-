@@ -61,6 +61,7 @@
     "socket.io": "^4.7.5",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^4.20.0",
+    "web-push": "^3.6.6",
     "winston": "^3.13.0"
   },
   "devDependencies": {

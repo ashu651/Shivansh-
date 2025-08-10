@@ -18,6 +18,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { AdminModule } from './admin/admin.module';
 import { ConsentController } from './consent/consent.controller';
 import { createGraphqlContext } from './graphql/context';
+import { PushController } from './push/push.controller';
 
 @Module({
   imports: [
@@ -45,7 +46,7 @@ import { createGraphqlContext } from './graphql/context';
     MediaModule,
     AdminModule,
   ],
-  controllers: [UsersController, MessagesController, ConsentController],
+  controllers: [UsersController, MessagesController, ConsentController, PushController],
   providers: [
     UsersService,
     MessagesService,
