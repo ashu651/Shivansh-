@@ -1,0 +1,26 @@
+{
+  "name": "snapzy-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Snapzy monorepo (web, api, ai services) using pnpm workspaces",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "docker-compose -f docker-compose.yml up --build",
+    "dev:local": "pnpm -r --filter ./apps/api dev & pnpm -r --filter ./apps/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "seed": "pnpm --filter @snapzy/api exec ts-node --transpile-only ../../scripts/seed.ts",
+    "migrate": "bash ./scripts/migrate.sh"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0",
+    "prettier": "^3.2.5"
+  }
+}

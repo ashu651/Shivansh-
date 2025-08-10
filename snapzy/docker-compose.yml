@@ -1,0 +1,105 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: snapzy
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  api:
+    build:
+      context: ./apps/api
+    env_file: .env.example
+    environment:
+      NODE_ENV: development
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./apps/api:/usr/src/app
+    command: sh -c "pnpm install && pnpm prisma generate && pnpm prisma migrate deploy && pnpm start:dev"
+
+  worker:
+    build:
+      context: ./apps/api
+    env_file: .env.example
+    environment:
+      NODE_ENV: development
+    depends_on:
+      - api
+      - redis
+    volumes:
+      - ./apps/api:/usr/src/app
+    command: sh -c "pnpm install && pnpm start:worker:dev"
+
+  web:
+    build:
+      context: ./apps/web
+    env_file: .env.example
+    environment:
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/usr/src/app
+    command: sh -c "pnpm install && pnpm dev"
+
+  captioning-service:
+    build:
+      context: ./services/ai/captioning-service
+    env_file: .env.example
+    environment:
+      REDIS_URL: ${REDIS_URL}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/ai/captioning-service:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
+
+  moderation-service:
+    build:
+      context: ./services/ai/moderation-service
+    env_file: .env.example
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./services/ai/moderation-service:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8002 --reload"
+
+  embeddings-service:
+    build:
+      context: ./services/ai/embeddings-service
+    env_file: .env.example
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./services/ai/embeddings-service:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8003 --reload"
+
+volumes:
+  pgdata:
+  redisdata:

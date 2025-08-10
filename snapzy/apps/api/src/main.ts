@@ -1,0 +1,100 @@
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { ValidationPipe } from '@nestjs/common';
+import * as promClient from 'prom-client';
+import { CsrfDoubleSubmit, CsrfTokenIssue } from './common/middleware/csrf.middleware';
+import { IdempotencyMiddleware } from './common/middleware/idempotency.middleware';
+import * as Sentry from '@sentry/node';
+import { RequestLoggerMiddleware } from './common/middleware/logger.middleware';
+import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
+import { ETagMiddleware } from './common/middleware/etag.middleware';
+import { CspNonceMiddleware } from './common/middleware/csp-nonce.middleware';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, { cors: false });
+
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1 });
+    app.use((Sentry as any).Handlers.requestHandler());
+    app.useGlobalInterceptors(new SentryInterceptor());
+  }
+
+  app.use(CspNonceMiddleware);
+  app.use((req: any, res: any, next: any) => helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", `'nonce-${res.locals.cspNonce}'`],
+        imgSrc: ["'self'", 'data:', 'https:', 'http:'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })(req, res, next));
+
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token', 'idempotency-key'],
+    exposedHeaders: ['x-request-id'],
+  });
+
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ extended: true }));
+  app.use(cookieParser());
+
+  const limiter = rateLimit({ windowMs: 60_000, max: 300 });
+  app.use(limiter);
+
+  app.use(CorrelationIdMiddleware);
+  app.use(RequestLoggerMiddleware);
+  app.use(CsrfTokenIssue);
+  app.use(CsrfDoubleSubmit);
+  app.use(IdempotencyMiddleware);
+  app.use(ETagMiddleware);
+  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalInterceptors(new ResponseInterceptor());
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  const config = new DocumentBuilder()
+    .setTitle('Snapzy API')
+    .setDescription('REST API for Snapzy')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('/api/docs', app, document);
+
+  const register = new promClient.Registry();
+  promClient.collectDefaultMetrics({ register });
+  app.getHttpAdapter().getInstance().get('/metrics', async (_req: any, res: any) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  });
+
+  app.getHttpAdapter().getInstance().get('/health/liveness', (_req: any, res: any) => {
+    res.json({ ok: true, status: 'live' });
+  });
+  app.getHttpAdapter().getInstance().get('/health/readiness', (_req: any, res: any) => {
+    res.json({ ok: true, status: 'ready' });
+  });
+
+  if (process.env.SENTRY_DSN) {
+    app.use((Sentry as any).Handlers.errorHandler());
+  }
+
+  await app.listen(4000);
+  console.log(`API running on http://localhost:4000`);
+}
+
+bootstrap();

@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: snapzy-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  tls:
+    - hosts:
+        - api.snapzy.local
+        - app.snapzy.local
+      secretName: snapzy-tls
+  rules:
+    - host: api.snapzy.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: snapzy-api
+                port:
+                  number: 80
+    - host: app.snapzy.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: snapzy-web
+                port:
+                  number: 80
