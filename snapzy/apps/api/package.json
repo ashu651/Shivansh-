@@ -50,6 +50,7 @@
     "joi": "^17.9.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.13",
     "passport": "^0.7.0",
     "passport-apple": "^2.0.2",
     "passport-google-oauth20": "^2.0.0",
@@ -59,6 +60,7 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.7.5",
     "swagger-ui-express": "^5.0.1",
+    "twilio": "^4.20.0",
     "winston": "^3.13.0"
   },
   "devDependencies": {

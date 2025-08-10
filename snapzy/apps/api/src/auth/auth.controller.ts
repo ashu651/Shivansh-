@@ -8,6 +8,8 @@ import { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import Redis from 'ioredis';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
+import twilio from 'twilio';
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
@@ -89,7 +91,11 @@ export class AuthController {
   async magicRequest(@Body() body: any) {
     const token = crypto.randomBytes(16).toString('hex');
     await redis.set(`magic:${token}`, body.email, 'EX', 10 * 60);
-    // TODO: email magic link containing token
+    if (process.env.SMTP_HOST) {
+      const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure: false, auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } });
+      const link = `${process.env.WEB_URL || 'http://localhost:3000'}/login?token=${token}`;
+      await transporter.sendMail({ from: process.env.SMTP_FROM || 'no-reply@snapzy.local', to: body.email, subject: 'Your Snapzy login link', text: `Login link: ${link}` });
+    }
     return { ok: true };
   }
 
@@ -109,7 +115,10 @@ export class AuthController {
   async otpRequest(@Body() body: any) {
     const code = (Math.floor(Math.random() * 900000) + 100000).toString();
     await redis.set(`otp:${body.phone}`, code, 'EX', 5 * 60);
-    // TODO: send via Twilio stub
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+      const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      await client.messages.create({ from: process.env.TWILIO_FROM_NUMBER, to: body.phone, body: `Your Snapzy code: ${code}` });
+    }
     return { ok: true };
   }
 
