@@ -10,6 +10,7 @@ import Redis from 'ioredis';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
+import { AuthGuard } from '@nestjs/passport';
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
@@ -134,11 +135,18 @@ export class AuthController {
 
   // Google OAuth placeholders (real flow handled via passport or frontend)
   @Get('oauth/google')
-  async googleStart() {
-    return { ok: true };
-  }
+  @UseGuards(AuthGuard('google'))
+  async googleStart() { return { ok: true }; }
+
   @Get('oauth/google/callback')
-  async googleCallback() {
-    return { ok: true };
-  }
+  @UseGuards(AuthGuard('google'))
+  async googleCallback() { return { ok: true }; }
+
+  @Get('oauth/apple')
+  @UseGuards(AuthGuard('apple'))
+  async appleStart() { return { ok: true }; }
+
+  @Get('oauth/apple/callback')
+  @UseGuards(AuthGuard('apple'))
+  async appleCallback() { return { ok: true }; }
 }
