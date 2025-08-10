@@ -1,11 +1,25 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get('token');
+    if (t) {
+      (async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/v1/auth/magic/consume?token=${t}`, { credentials: 'include' });
+          const data = await res.json();
+          if (data?.accessToken) setToken(data.accessToken);
+        } catch {}
+      })();
+    }
+  }, []);
 
   return (
     <main className="p-6 max-w-sm mx-auto">
