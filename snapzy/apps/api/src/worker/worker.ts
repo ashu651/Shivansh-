@@ -14,21 +14,27 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
   });
 }
 
+function cloudinaryHlsUrl(publicId: string) {
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME;
+  if (!cloud || !publicId) return null;
+  return `https://res.cloudinary.com/${cloud}/video/upload/sp_hd/${publicId}.m3u8`;
+}
+
 const worker = new Worker('media-processing', async (job) => {
   const { postId } = job.data as { postId: string };
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post) return;
   const media = Array.isArray(post.media) ? post.media : [];
   const processed = await Promise.all(media.map(async (m: any) => {
+    const cloudHls = m.public_id ? cloudinaryHlsUrl(m.public_id) : null;
     const base = {
       ...m,
       processed: true,
-      hls: { playlist: (m.url || '').replace(/\.(mp4|mov|webm)$/i, '.m3u8'), variants: [240, 480, 720] },
+      hls: { playlist: cloudHls || (m.url || '').replace(/\.(mp4|mov|webm)$/i, '.m3u8'), variants: [240, 480, 720] },
     };
     try {
-      if (cloudinary.config()?.cloud_name && m.url) {
-        // Derive a simple thumbnail via Cloudinary transformation if public_id provided
-        const thumbUrl = m.public_id ? cloudinary.url(m.public_id, { width: 480, crop: 'scale', format: 'jpg' }) : m.url;
+      if (cloudinary.config()?.cloud_name && m.public_id) {
+        const thumbUrl = cloudinary.url(m.public_id, { width: 480, crop: 'scale', format: 'jpg', resource_type: 'video' });
         return { ...base, thumbnailUrl: thumbUrl };
       }
     } catch {}
