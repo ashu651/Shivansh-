@@ -17,6 +17,7 @@ import Joi from 'joi';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AdminModule } from './admin/admin.module';
 import { ConsentController } from './consent/consent.controller';
+import { createGraphqlContext } from './graphql/context';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ConsentController } from './consent/consent.controller';
       autoSchemaFile: join(process.cwd(), 'schema.gql'),
       playground: true,
       sortSchema: true,
+      context: () => createGraphqlContext(),
     }),
     AuthModule,
     PostsModule,
