@@ -17,6 +17,7 @@ import * as Sentry from '@sentry/node';
 import { RequestLoggerMiddleware } from './common/middleware/logger.middleware';
 import { SentryInterceptor } from './common/interceptors/sentry.interceptor';
 import { ETagMiddleware } from './common/middleware/etag.middleware';
+import { CspNonceMiddleware } from './common/middleware/csp-nonce.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
@@ -27,17 +28,18 @@ async function bootstrap() {
     app.useGlobalInterceptors(new SentryInterceptor());
   }
 
-  app.use(helmet({
+  app.use(CspNonceMiddleware);
+  app.use((req: any, res: any, next: any) => helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", `'nonce-${res.locals.cspNonce}'`],
         imgSrc: ["'self'", 'data:', 'https:', 'http:'],
         styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-  }));
+  })(req, res, next));
 
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:3000'],

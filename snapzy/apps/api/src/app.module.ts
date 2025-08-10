@@ -16,6 +16,7 @@ import { join } from 'path';
 import Joi from 'joi';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AdminModule } from './admin/admin.module';
+import { ConsentController } from './consent/consent.controller';
 
 @Module({
   imports: [
@@ -42,7 +43,7 @@ import { AdminModule } from './admin/admin.module';
     MediaModule,
     AdminModule,
   ],
-  controllers: [UsersController, MessagesController],
+  controllers: [UsersController, MessagesController, ConsentController],
   providers: [
     UsersService,
     MessagesService,
